@@ -217,6 +217,9 @@ model TrainingWeek {
   focus       String[]
   // Semaine réellement appliquée (après ajustement de charge) vs théorique
   appliedFactor Float         @default(1)
+  /// Surcharge du gabarit football pour cette semaine : [{ weekday, football }]
+  footballDays Json?
+  workoutsGeneratedAt DateTime?
   workouts    Workout[]
 
   @@unique([planId, index])

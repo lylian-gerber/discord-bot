@@ -143,6 +143,8 @@ export function buildMacrocycle(input: MacroInput): PlannedWeek[] {
         hours = Math.min(hours, prevLoadedHours * 1.1 + 0.25); // rampe douce (+0,25 h pour décoller d'un volume faible)
         long = Math.min(long, prevLong + 20);
       }
+      // La sortie longue ne doit pas écraser la semaine : ≤ 55 % du volume (sauf durée déjà maîtrisée).
+      long = Math.min(long, Math.max(input.currentLongestRunMin, hours * 60 * 0.55));
       if (isDeload) {
         hours *= 0.7;
         long *= 0.7;

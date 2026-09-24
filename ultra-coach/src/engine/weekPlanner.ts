@@ -50,6 +50,12 @@ export interface PlannedDay {
 
 export interface WeekPlanOptions {
   lastMatchMinutes?: number;
+  /** Jours où rien ne doit être ajouté : jours passés ou séance déjà réalisée. */
+  blockedWeekdays?: number[];
+  /** Minutes de course/trail déjà réalisées cette semaine (déduites du volume). */
+  doneRunMin?: number;
+  /** Une sortie longue a déjà été faite cette semaine. */
+  longRunDone?: boolean;
 }
 
 const QUALITY_BY_PHASE: Record<PlannedWeek["phase"], TrailSessionType[]> = {
@@ -80,10 +86,12 @@ export function planWeek(days: WeekDayPlan[], week: PlannedWeek, opts: WeekPlanO
       return { weekday: d.weekday, football: d.football, daysToMatch: dtm, daysSinceMatch: dsm, sessions: [] };
     });
 
+  const blocked = new Set(opts.blockedWeekdays ?? []);
   const noMatch = matchDays.length === 0;
   const lowMinutes = (opts.lastMatchMinutes ?? 90) < 45;
   const isFree = (d: PlannedDay) => d.football === "none";
-  const isMatch = (d: PlannedDay) => d.football === "match";
+  // Un jour bloqué est traité comme indisponible pour toute séance ajoutée.
+  const isMatch = (d: PlannedDay) => d.football === "match" || blocked.has(d.weekday);
 
   // 1) Sortie longue
   const longScore = (d: PlannedDay): number => {
@@ -99,7 +107,7 @@ export function planWeek(days: WeekDayPlan[], week: PlannedWeek, opts: WeekPlanO
   };
   const longDay = [...out].sort((a, b) => longScore(b) - longScore(a))[0];
   let longPlaced: PlannedDay | undefined;
-  if (longDay && longScore(longDay) > -Infinity && longScore(longDay) >= -1) {
+  if (!opts.longRunDone && longDay && longScore(longDay) > -Infinity && longScore(longDay) >= -1) {
     longPlaced = longDay;
     longDay.sessions.push({
       type: week.phase === "trail" || week.phase === "specific" || week.phase === "peak" ? "hike_run" : "long",
@@ -143,7 +151,7 @@ export function planWeek(days: WeekDayPlan[], week: PlannedWeek, opts: WeekPlanO
   if (light) light.sessions.push({ type: "strength_light", durationMin: 20, note: "Pieds, chevilles, soléaire, gainage." });
 
   // 4) Récupération MD+1
-  for (const d of out) if (d.daysSinceMatch === 1 && d.sessions.length === 0 && !isMatch(d)) {
+  for (const d of out) if (d.daysSinceMatch === 1 && d.sessions.length === 0 && !isMatch(d) && d.football !== "match") {
     d.sessions.push({ type: "recovery", durationMin: 30, note: "Marche, vélo très facile ou mobilité." });
   }
 
@@ -154,7 +162,7 @@ export function planWeek(days: WeekDayPlan[], week: PlannedWeek, opts: WeekPlanO
     (d) => !isMatch(d) && d.sessions.every((s) => s.type.startsWith("strength")) && (d.football === "none" || d.football === "light") && (noMatch || (d.daysToMatch ?? 7) >= 2) && (d.daysSinceMatch ?? 7) >= 2,
   );
   for (const d of easyDays) {
-    const remaining = week.runHours * 60 - planned();
+    const remaining = week.runHours * 60 - (opts.doneRunMin ?? 0) - planned();
     if (remaining < 25) break;
     d.sessions.push({ type: "easy", durationMin: Math.min(60, Math.round(remaining / 5) * 5), doubleDay: d.football !== "none" });
   }

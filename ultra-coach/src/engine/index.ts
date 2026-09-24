@@ -11,3 +11,4 @@ export * from "./weekPlanner";
 export * from "./sleep";
 export * from "./gear";
 export * from "./safety";
+export * from "./sessionLibrary";

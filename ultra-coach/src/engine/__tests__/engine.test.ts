@@ -291,3 +291,45 @@ describe("sommeil, matériel, sécurité", () => {
     expect(checkSafety("cheville gonflée après l'entorse").level).toBe("medical");
   });
 });
+
+describe("bibliothèque de séances", () => {
+  it("allures à partir de la VMA", async () => {
+    const { paceAt, describeSession } = await import("../sessionLibrary");
+    expect(paceAt(18, 1)).toBe("3:20");
+    const s = describeSession({ type: "progressive", durationMin: 60, maxDescentM: 150 }, { vma: 18, maxHr: 195 });
+    expect(s.blocks).toHaveLength(5);
+    expect(s.blocks.reduce((a, b) => a + (b.durationMin ?? 0), 0)).toBe(60);
+    expect(s.objective).toMatch(/150 m/);
+    expect(s.fueling.carbsPerHour).toBe(0);
+    expect(describeSession({ type: "long", durationMin: 150 }).fueling.carbsPerHour).toBe(40);
+  });
+});
+
+describe("équilibre de la semaine", () => {
+  it("la sortie longue ne dépasse pas 55 % du volume hebdo (sauf durée déjà maîtrisée)", () => {
+    const plan = buildMacrocycle({ start: "2026-09-24", raceDate: "2027-06-26", raceDistanceKm: 100, raceDplusM: 4500, currentWeeklyRunHours: 1.5, currentLongestRunMin: 75 });
+    for (const w of plan) expect(w.longRunMin).toBeLessThanOrEqual(Math.max(75, w.runHours * 60 * 0.55) + 5);
+  });
+});
+
+describe("recalcul en cours de semaine", () => {
+  const plan = buildMacrocycle({ start: "2026-09-24", raceDate: "2027-06-26", raceDistanceKm: 100, raceDplusM: 4500, currentWeeklyRunHours: 3, currentLongestRunMin: 100 });
+  const week = plan.find((w) => w.phase === "endurance" && !w.isDeload)!;
+  const days: WeekDayPlan[] = [
+    { weekday: 0, football: "light" }, { weekday: 1, football: "moderate" }, { weekday: 2, football: "light" },
+    { weekday: 3, football: "none" }, { weekday: 4, football: "light" }, { weekday: 5, football: "none" }, { weekday: 6, football: "match" },
+  ];
+
+  it("n'ajoute rien sur les jours bloqués (passés ou séance déjà faite)", () => {
+    const out = planWeek(days, week, { blockedWeekdays: [0, 1, 2, 3], doneRunMin: 60 });
+    for (const d of out.slice(0, 4)) expect(d.sessions).toHaveLength(0);
+    expect(out[6]!.sessions).toHaveLength(0); // match
+  });
+
+  it("déduit le volume déjà couru", () => {
+    const fresh = planWeek(days, week, { blockedWeekdays: [0, 1, 2] });
+    const done = planWeek(days, week, { blockedWeekdays: [0, 1, 2], doneRunMin: 600 });
+    const run = (x: typeof fresh) => x.flatMap((d) => d.sessions).filter((s) => s.type === "easy").length;
+    expect(run(done)).toBeLessThanOrEqual(run(fresh));
+  });
+});
