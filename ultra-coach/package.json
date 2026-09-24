@@ -1,0 +1,18 @@
+{
+  "name": "ultra-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Endurance Performance Coach — football + ultra-trail",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prisma:validate": "prisma validate"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
