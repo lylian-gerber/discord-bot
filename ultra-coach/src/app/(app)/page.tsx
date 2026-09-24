@@ -1,9 +1,12 @@
 import { AlertTriangle, ChevronRight, Droplets, Moon, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { Bar, CardLink, fmtHours, Ring, Stat, tierColor } from "@/components/ui";
+import { RpePrompt } from "@/components/RpePrompt";
 import { WorkoutRow } from "@/components/WorkoutRow";
+import { addDays } from "@/engine";
+import { db } from "@/lib/db";
 import { requireAthlete } from "@/lib/auth";
-import { formatDayFr, localToday } from "@/lib/day";
+import { dbDate, formatDayFr, localToday } from "@/lib/day";
 import { todayData } from "@/server/today";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const { user, profile } = await requireAthlete();
   const day = localToday(user.timezone);
-  const t = await todayData(user.id, profile, day);
+  const [t, toConfirm] = await Promise.all([
+    todayData(user.id, profile, day),
+    db.activity.findMany({ where: { userId: user.id, rpeEstimated: true, day: { gte: dbDate(addDays(day, -3)) } }, orderBy: { startAt: "desc" }, take: 3 }),
+  ]);
   const r = t.readiness;
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: user.timezone }).format(new Date()));
   const hello = hour < 18 ? "Bonjour" : "Bonsoir";
@@ -79,6 +85,8 @@ export default async function TodayPage() {
           <p className="mt-2 rounded-lg bg-warn/10 p-2 text-xs text-warn">Séance adaptée à ta forme du jour.</p>
         )}
       </section>
+
+      <RpePrompt activities={toConfirm} />
 
       {/* Demain / match */}
       <section className="card grid grid-cols-2 gap-4">

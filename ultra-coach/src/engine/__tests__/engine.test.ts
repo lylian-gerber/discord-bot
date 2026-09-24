@@ -115,6 +115,16 @@ describe("durability", () => {
     expect(r.retentionByHour[0]!.retentionPct).toBeLessThan(100);
   });
 
+  it("altitude GPS bruitée sur le plat : pas de fausse dégradation", () => {
+    let seed = 42;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 6; // ±3 m
+    const pts = stream(3.2, () => 3, () => 140).map((p) => ({ ...p, alt: 100 + rand() }));
+    const r = computeDurability(pts)!;
+    expect(r.score).toBeGreaterThanOrEqual(90);
+    // 3 m/s = 180 m/min : le bruit ne doit pas gonfler l'allure ajustée de plus de 5 %
+    for (const b of r.buckets) expect(b.gapSpeedMpm).toBeLessThan(189);
+  });
+
   it("séance trop courte → null", () => {
     expect(computeDurability(stream(0.5, () => 3, () => 140))).toBeNull();
   });

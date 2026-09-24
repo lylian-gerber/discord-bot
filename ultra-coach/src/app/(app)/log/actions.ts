@@ -8,6 +8,7 @@ import { sessionLoad } from "@/engine";
 import { requireAthlete } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dbDate, localToday } from "@/lib/day";
+import { linkPlannedWorkout } from "@/server/activities";
 
 const num = (min: number, max: number) => z.preprocess((v) => (v === "" || v === null ? undefined : v), z.coerce.number().min(min).max(max).optional());
 const SPORTS = ["football", "running", "trail", "hiking", "cycling", "walking", "strength", "mobility", "swimming", "other"] as const;
@@ -69,18 +70,7 @@ export async function logActivity(_: LogState, form: FormData): Promise<LogState
   }
 
   // Rattachement à la séance planifiée
-  const planned = v.workoutId
-    ? await db.workout.findFirst({ where: { id: v.workoutId, userId: user.id, activityId: null } })
-    : await db.workout.findFirst({
-        where: {
-          userId: user.id,
-          day: dbDate(v.day),
-          activityId: null,
-          status: { in: ["planned", "adapted"] },
-          ...(v.sport === "football" ? { sport: "football" } : { sport: { in: v.sport === "strength" ? ["strength"] : ["trail", "mobility"] } }),
-        },
-      });
-  if (planned) await db.workout.update({ where: { id: planned.id }, data: { activityId: activity.id, status: "done" } });
+  const planned = await linkPlannedWorkout(user.id, activity.id, v.sport, v.day, v.workoutId);
 
   // Ravitaillement / entraînement du ventre
   if (v.carbsTotalG !== undefined && v.durationMin >= 45) {

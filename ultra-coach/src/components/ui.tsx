@@ -43,11 +43,11 @@ export function Ring({ value, color, size = 112, stroke = 10, children }: { valu
   );
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+export function PageHeader({ title, subtitle, action, raw = false }: { title: string; subtitle?: string; action?: React.ReactNode; raw?: boolean }) {
   return (
     <header className="mb-5 flex items-end justify-between gap-3 pt-6">
       <div>
-        {subtitle && <p className="text-sm text-muted first-letter:uppercase">{subtitle}</p>}
+        {subtitle && <p className={`text-sm text-muted ${raw ? "" : "first-letter:uppercase"}`}>{subtitle}</p>}
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
       </div>
       {action}

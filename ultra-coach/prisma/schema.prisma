@@ -325,6 +325,8 @@ model Activity {
   avgSpeedMps    Float?
   calories       Float?
   rpe            Float?
+  /// vrai si le RPE a été estimé (FC) et doit être confirmé par l'athlète
+  rpeEstimated   Boolean  @default(false)
   feeling        String?
   trainingLoad   Float?   // sRPE calculé
   streamsKey     String?  // clé S3 du JSON des streams (t, d, alt, hr, cad, power, latlng)

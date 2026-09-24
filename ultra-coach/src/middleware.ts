@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/signup"];
+const PUBLIC = ["/login", "/signup", "/api/webhooks/"];
 
 /** Filtre grossier (présence du cookie). La vraie vérification de session se fait côté serveur. */
 export function middleware(req: NextRequest) {

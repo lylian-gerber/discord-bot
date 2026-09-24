@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "strava:subscribe": "node --env-file=.env scripts/strava-subscribe.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

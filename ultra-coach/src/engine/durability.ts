@@ -62,8 +62,25 @@ export interface DurabilityResult {
 
 const WARMUP_S = 600;
 
+/** Moyenne glissante de l'altitude (±2 points) : le bruit GPS créerait sinon de fausses pentes. */
+export function smoothAltitude(points: StreamPoint[], half = 2): StreamPoint[] {
+  return points.map((p, i) => {
+    if (p.alt === undefined) return p;
+    let sum = 0;
+    let n = 0;
+    for (let k = Math.max(0, i - half); k <= Math.min(points.length - 1, i + half); k++) {
+      const a = points[k]!.alt;
+      if (a !== undefined) {
+        sum += a;
+        n++;
+      }
+    }
+    return { ...p, alt: sum / n };
+  });
+}
+
 export function computeDurability(points: StreamPoint[], bucketMin = 60): DurabilityResult | null {
-  const pts = points.filter((p) => p.moving !== false);
+  const pts = smoothAltitude(points.filter((p) => p.moving !== false));
   if (pts.length < 10) return null;
   const totalS = pts[pts.length - 1]!.t - pts[0]!.t;
   if (totalS < 45 * 60) return null; // < 45 min : pas de signal de durabilité exploitable
@@ -82,7 +99,7 @@ export function computeDurability(points: StreamPoint[], bucketMin = 60): Durabi
     const dt = b.t - a.t;
     const dd = b.d - a.d;
     if (dt <= 0 || dt > 60 || dd < 0) continue; // pauses / trous GPS
-    const grade = dd > 0.5 && a.alt !== undefined && b.alt !== undefined ? (b.alt - a.alt) / dd : 0;
+    const grade = dd > 1 && a.alt !== undefined && b.alt !== undefined ? (b.alt - a.alt) / dd : 0;
     const gapDist = dd * gradeFactor(grade);
     const tMid = (a.t + b.t) / 2 - t0;
     segs.push({ tMid, dt, gapDist, hr: b.hr });
